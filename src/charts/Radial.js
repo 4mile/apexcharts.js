@@ -288,30 +288,47 @@ class Radial extends Pie {
       let startAngle = this.startAngle
       let prevStartAngle
 
-      // if data exceeds 100, make it 100
-      const dataValue =
-        Utils.negToZero(opts.series[i] > 100 ? 100 : opts.series[i]) / 100
+      // if data exceeds 100 or -100, make it 100 or -100
+      let dataValue
+      if (opts.series[i] > 100) {
+        dataValue = 1
+      } else if (opts.series[i] < -100) {
+        dataValue = -1
+      } else {
+        dataValue = opts.series[i] / 100
+      }
+
+      let rotateCounterClockwise = opts.series[i] < 0
 
       let endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle
 
       let prevEndAngle
       if (w.globals.dataChanged) {
+        let prevValue
+        if (w.globals.previousPaths[i] > 100) {
+          prevValue = 1
+        } else if (w.globals.previousPaths[i] < -100) {
+          prevValue = -1
+        } else {
+          prevValue = w.globals.previousPaths[i] / 100
+        }
         prevStartAngle = this.startAngle
         prevEndAngle =
-          Math.round(
-            (this.totalAngle * Utils.negToZero(w.globals.previousPaths[i])) /
-              100
-          ) + prevStartAngle
+          Math.round((this.totalAngle * prevValue) / 100) + prevStartAngle
       }
 
       const currFullAngle = Math.abs(endAngle) + Math.abs(startAngle)
       if (currFullAngle >= 360) {
         endAngle = endAngle - 0.01
+      } else if (currFullAngle <= -360) {
+        endAngle = endAngle + 0.01
       }
 
       const prevFullAngle = Math.abs(prevEndAngle) + Math.abs(prevStartAngle)
       if (prevFullAngle >= 360) {
         prevEndAngle = prevEndAngle - 0.01
+      } else if (prevFullAngle <= -360) {
+        prevEndAngle = prevEndAngle + 0.01
       }
 
       let angle = endAngle - startAngle
@@ -374,11 +391,12 @@ class Radial extends Pie {
         startAngle,
         prevEndAngle,
         prevStartAngle,
+        rotateCounterClockwise,
         size: opts.size,
         i,
         totalItems: 2,
         animBeginArr: this.animBeginArr,
-        dur,
+        dur: Math.abs(dur),
         shouldSetPrevPaths: true,
         easing: w.globals.easing
       })
