@@ -455,8 +455,10 @@ class Pie {
         : opts.endAngle - opts.startAngle
     let prevAngle = angle
 
-    let fromStartAngle = opts.startAngle
-    let toStartAngle = opts.startAngle
+    let fromStartAngle =
+      opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle
+    let toStartAngle =
+      opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle
 
     if (opts.prevStartAngle !== undefined && opts.prevEndAngle !== undefined) {
       fromStartAngle = opts.prevEndAngle
@@ -497,10 +499,19 @@ class Pie {
 
     let currAngle = angle
     let startAngle = toStartAngle
-    let fromAngle =
-      fromStartAngle < toStartAngle
-        ? this.fullAngle + fromStartAngle - toStartAngle
-        : fromStartAngle - toStartAngle
+    let fromAngle
+
+    if (opts.rotateCounterClockwise) {
+      fromAngle =
+        fromStartAngle < toStartAngle
+          ? fromStartAngle - toStartAngle
+          : this.fullAngle + fromStartAngle - toStartAngle
+    } else {
+      fromAngle =
+        fromStartAngle < toStartAngle
+          ? this.fullAngle + fromStartAngle - toStartAngle
+          : fromStartAngle - toStartAngle
+    }
 
     if (w.globals.dataChanged && opts.shouldSetPrevPaths) {
       // to avoid flicker when updating, set prev path first and then animate from there
@@ -512,7 +523,8 @@ class Pie {
             opts.prevEndAngle < opts.prevStartAngle
               ? this.fullAngle + opts.prevEndAngle - opts.prevStartAngle
               : opts.prevEndAngle - opts.prevStartAngle,
-          size
+          size,
+          rotateCounterClockwise: opts.rotateCounterClockwise
         })
         el.attr({ d: path })
       }
@@ -538,20 +550,34 @@ class Pie {
           }
         })
         .during((pos) => {
-          currAngle = fromAngle + (angle - fromAngle) * pos
+          currAngle = opts.rotateCounterClockwise
+            ? this.fullAngle - fromAngle - (fromAngle - angle) * pos
+            : fromAngle + (angle - fromAngle) * pos
+
           if (opts.animateStartingPos) {
-            currAngle = prevAngle + (angle - prevAngle) * pos
-            startAngle =
-              fromStartAngle -
-              prevAngle +
-              (toStartAngle - (fromStartAngle - prevAngle)) * pos
+            //TODO: confirm this works
+            if (opts.rotateCounterClockwise) {
+              currAngle = this.fullAngle - fromAngle - (fromAngle - angle) * pos
+              startAngle =
+                this.fullAngle -
+                fromAngle -
+                prevAngle +
+                (toStartAngle - (prevAngle - fromStartAngle)) * pos
+            } else {
+              currAngle = prevAngle + (angle - prevAngle) * pos
+              startAngle =
+                fromStartAngle -
+                prevAngle +
+                (toStartAngle - (fromStartAngle - prevAngle)) * pos
+            }
           }
 
           path = me.getPiePath({
             me,
             startAngle,
             angle: currAngle,
-            size
+            size,
+            rotateCounterClockwise: opts.rotateCounterClockwise
           })
 
           el.node.setAttribute('data:pathOrig', path)
@@ -564,8 +590,9 @@ class Pie {
       path = me.getPiePath({
         me,
         startAngle,
-        angle,
-        size
+        angle: opts.rotateCounterClockwise ? -this.fullAngle + angle : angle,
+        size,
+        rotateCounterClockwise: opts.rotateCounterClockwise
       })
 
       if (!opts.isTrack) {
@@ -643,7 +670,7 @@ class Pie {
     return path
   }
 
-  getPiePath({ me, startAngle, angle, size }) {
+  getPiePath({ me, startAngle, angle, size, rotateCounterClockwise }) {
     let path
 
     let startDeg = startAngle
@@ -683,9 +710,30 @@ class Pie {
       startDeg
     )
 
-    let largeArc = angle > 180 ? 1 : 0
+    // handle whether the angle is +/-
+    let largeArc
+    let sweep
+    if (rotateCounterClockwise) {
+      largeArc = angle < -180 ? 1 : 0
+      sweep = 0
+    } else {
+      largeArc = angle > 180 ? 1 : 0
+      sweep = 1
+    }
 
-    const pathBeginning = ['M', x1, y1, 'A', size, size, 0, largeArc, 1, x2, y2]
+    const pathBeginning = [
+      'M',
+      x1,
+      y1,
+      'A',
+      size,
+      size,
+      0,
+      largeArc,
+      sweep,
+      x2,
+      y2
+    ]
 
     if (me.chartType === 'donut') {
       path = [

@@ -479,7 +479,6 @@ export default class ApexCharts {
   update(options) {
     return new Promise((resolve, reject) => {
       new Destroy(this.ctx).clear({ isUpdating: true })
-
       const graphData = this.create(this.w.config.series, options)
       if (!graphData) return resolve(this)
       this.mount(graphData)
