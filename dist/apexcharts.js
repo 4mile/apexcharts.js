@@ -6330,7 +6330,6 @@
     function Bar(ctx, xyRatios) {
       _classCallCheck(this, Bar);
 
-      console.log('BOOYAH');
       this.ctx = ctx;
       this.w = ctx.w;
       var w = this.w;
@@ -19863,8 +19862,8 @@
         var me = this;
         var angle = opts.endAngle < opts.startAngle ? this.fullAngle + opts.endAngle - opts.startAngle : opts.endAngle - opts.startAngle;
         var prevAngle = angle;
-        var fromStartAngle = opts.startAngle;
-        var toStartAngle = opts.startAngle;
+        var fromStartAngle = opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle;
+        var toStartAngle = opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle;
 
         if (opts.prevStartAngle !== undefined && opts.prevEndAngle !== undefined) {
           fromStartAngle = opts.prevEndAngle;
@@ -19886,6 +19885,8 @@
     }, {
       key: "animateArc",
       value: function animateArc(el, fromStartAngle, toStartAngle, angle, prevAngle, opts) {
+        var _this2 = this;
+
         var me = this;
         var w = this.w;
         var animations = new Animations(this.ctx);
@@ -19900,7 +19901,13 @@
 
         var currAngle = angle;
         var startAngle = toStartAngle;
-        var fromAngle = fromStartAngle < toStartAngle ? this.fullAngle + fromStartAngle - toStartAngle : fromStartAngle - toStartAngle;
+        var fromAngle;
+
+        if (opts.rotateCounterClockwise) {
+          fromAngle = fromStartAngle < toStartAngle ? fromStartAngle - toStartAngle : this.fullAngle + fromStartAngle - toStartAngle;
+        } else {
+          fromAngle = fromStartAngle < toStartAngle ? this.fullAngle + fromStartAngle - toStartAngle : fromStartAngle - toStartAngle;
+        }
 
         if (w.globals.dataChanged && opts.shouldSetPrevPaths) {
           // to avoid flicker when updating, set prev path first and then animate from there
@@ -19909,7 +19916,8 @@
               me: me,
               startAngle: opts.prevStartAngle,
               angle: opts.prevEndAngle < opts.prevStartAngle ? this.fullAngle + opts.prevEndAngle - opts.prevStartAngle : opts.prevEndAngle - opts.prevStartAngle,
-              size: size
+              size: size,
+              rotateCounterClockwise: opts.rotateCounterClockwise
             });
             el.attr({
               d: path
@@ -19929,18 +19937,25 @@
               animations.animationCompleted(el);
             }
           }).during(function (pos) {
-            currAngle = fromAngle + (angle - fromAngle) * pos;
+            currAngle = opts.rotateCounterClockwise ? _this2.fullAngle - fromAngle - (fromAngle - angle) * pos : fromAngle + (angle - fromAngle) * pos;
 
             if (opts.animateStartingPos) {
-              currAngle = prevAngle + (angle - prevAngle) * pos;
-              startAngle = fromStartAngle - prevAngle + (toStartAngle - (fromStartAngle - prevAngle)) * pos;
+              //TODO: confirm this works
+              if (opts.rotateCounterClockwise) {
+                currAngle = _this2.fullAngle - fromAngle - (fromAngle - angle) * pos;
+                startAngle = _this2.fullAngle - fromAngle - prevAngle + (toStartAngle - (prevAngle - fromStartAngle)) * pos;
+              } else {
+                currAngle = prevAngle + (angle - prevAngle) * pos;
+                startAngle = fromStartAngle - prevAngle + (toStartAngle - (fromStartAngle - prevAngle)) * pos;
+              }
             }
 
             path = me.getPiePath({
               me: me,
               startAngle: startAngle,
               angle: currAngle,
-              size: size
+              size: size,
+              rotateCounterClockwise: opts.rotateCounterClockwise
             });
             el.node.setAttribute('data:pathOrig', path);
             el.attr({
@@ -19951,8 +19966,9 @@
           path = me.getPiePath({
             me: me,
             startAngle: startAngle,
-            angle: angle,
-            size: size
+            angle: opts.rotateCounterClockwise ? -this.fullAngle + angle : angle,
+            size: size,
+            rotateCounterClockwise: opts.rotateCounterClockwise
           });
 
           if (!opts.isTrack) {
@@ -20029,7 +20045,8 @@
         var me = _ref.me,
             startAngle = _ref.startAngle,
             angle = _ref.angle,
-            size = _ref.size;
+            size = _ref.size,
+            rotateCounterClockwise = _ref.rotateCounterClockwise;
         var path;
         var startDeg = startAngle;
         var startRadians = Math.PI * (startDeg - 90) / 180;
@@ -20046,9 +20063,20 @@
         var x2 = me.centerX + size * Math.cos(endRadians);
         var y2 = me.centerY + size * Math.sin(endRadians);
         var startInner = Utils.polarToCartesian(me.centerX, me.centerY, me.donutSize, endDeg);
-        var endInner = Utils.polarToCartesian(me.centerX, me.centerY, me.donutSize, startDeg);
-        var largeArc = angle > 180 ? 1 : 0;
-        var pathBeginning = ['M', x1, y1, 'A', size, size, 0, largeArc, 1, x2, y2];
+        var endInner = Utils.polarToCartesian(me.centerX, me.centerY, me.donutSize, startDeg); // handle whether the angle is +/-
+
+        var largeArc;
+        var sweep;
+
+        if (rotateCounterClockwise) {
+          largeArc = angle < -180 ? 1 : 0;
+          sweep = 0;
+        } else {
+          largeArc = angle > 180 ? 1 : 0;
+          sweep = 1;
+        }
+
+        var pathBeginning = ['M', x1, y1, 'A', size, size, 0, largeArc, sweep, x2, y2];
 
         if (me.chartType === 'donut') {
           path = [].concat(pathBeginning, ['L', startInner.x, startInner.y, 'A', me.donutSize, me.donutSize, 0, largeArc, 0, endInner.x, endInner.y, 'L', x1, y1, 'z']).join(' ');
@@ -20255,7 +20283,7 @@
     }, {
       key: "drawSpokes",
       value: function drawSpokes(parent) {
-        var _this2 = this;
+        var _this3 = this;
 
         var w = this.w;
         var graphics = new Graphics(this.ctx);
@@ -20269,14 +20297,14 @@
         }
 
         spokes.forEach(function (p, i) {
-          var line = graphics.drawLine(p.x, p.y, _this2.centerX, _this2.centerY, Array.isArray(spokeConfig.connectorColors) ? spokeConfig.connectorColors[i] : spokeConfig.connectorColors);
+          var line = graphics.drawLine(p.x, p.y, _this3.centerX, _this3.centerY, Array.isArray(spokeConfig.connectorColors) ? spokeConfig.connectorColors[i] : spokeConfig.connectorColors);
           parent.add(line);
         });
       }
     }, {
       key: "revertDataLabelsInner",
       value: function revertDataLabelsInner(elem, dataLabelsConfig, event) {
-        var _this3 = this;
+        var _this4 = this;
 
         var w = this.w;
         var dataLabelsGroup = w.globals.dom.baseEl.querySelector('.apexcharts-datalabels-group');
@@ -20293,7 +20321,7 @@
               }
 
               if (printLabel) {
-                _this3.printDataLabelsInner(s, dataLabelsConfig);
+                _this4.printDataLabelsInner(s, dataLabelsConfig);
               }
             }
           });
@@ -21027,27 +21055,51 @@
             value: opts.series[i]
           });
           var startAngle = this.startAngle;
-          var prevStartAngle = void 0; // if data exceeds 100, make it 100
+          var prevStartAngle = void 0; // if data exceeds 100 or -100, make it 100 or -100
 
-          var dataValue = Utils.negToZero(opts.series[i] > 100 ? 100 : opts.series[i]) / 100;
+          var dataValue = void 0;
+
+          if (opts.series[i] > 100) {
+            dataValue = 1;
+          } else if (opts.series[i] < -100) {
+            dataValue = -1;
+          } else {
+            dataValue = opts.series[i] / 100;
+          }
+
+          var rotateCounterClockwise = opts.series[i] < 0;
           var endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle;
           var prevEndAngle = void 0;
 
           if (w.globals.dataChanged) {
+            var prevValue = void 0;
+
+            if (w.globals.previousPaths[i] > 100) {
+              prevValue = 1;
+            } else if (w.globals.previousPaths[i] < -100) {
+              prevValue = -1;
+            } else {
+              prevValue = w.globals.previousPaths[i] / 100;
+            }
+
             prevStartAngle = this.startAngle;
-            prevEndAngle = Math.round(this.totalAngle * Utils.negToZero(w.globals.previousPaths[i]) / 100) + prevStartAngle;
+            prevEndAngle = Math.round(this.totalAngle * prevValue / 100) + prevStartAngle;
           }
 
           var currFullAngle = Math.abs(endAngle) + Math.abs(startAngle);
 
           if (currFullAngle >= 360) {
             endAngle = endAngle - 0.01;
+          } else if (currFullAngle <= -360) {
+            endAngle = endAngle + 0.01;
           }
 
           var prevFullAngle = Math.abs(prevEndAngle) + Math.abs(prevStartAngle);
 
           if (prevFullAngle >= 360) {
             prevEndAngle = prevEndAngle - 0.01;
+          } else if (prevFullAngle <= -360) {
+            prevEndAngle = prevEndAngle + 0.01;
           }
 
           var angle = endAngle - startAngle;
@@ -21099,11 +21151,12 @@
             startAngle: startAngle,
             prevEndAngle: prevEndAngle,
             prevStartAngle: prevStartAngle,
+            rotateCounterClockwise: rotateCounterClockwise,
             size: opts.size,
             i: i,
             totalItems: 2,
             animBeginArr: this.animBeginArr,
-            dur: dur,
+            dur: Math.abs(dur),
             shouldSetPrevPaths: true,
             easing: w.globals.easing
           });
