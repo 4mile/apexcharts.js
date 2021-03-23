@@ -26,7 +26,7 @@ const builds = {
     entry: resolvePath('src/apexcharts.js'),
     dest: resolvePath('dist/apexcharts.common.js'),
     format: 'cjs',
-    env: 'production',
+    env: 'developent',
     banner
   },
   'web-esm': {
