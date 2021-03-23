@@ -3,6 +3,7 @@ import Utils from '../utils/Utils'
 import Fill from '../modules/Fill'
 import Graphics from '../modules/Graphics'
 import Filters from '../modules/Filters'
+import Animations from '../modules/Animations'
 
 /**
  * ApexCharts Radial Class for drawing Circle / Semi Circle Charts.
@@ -72,6 +73,18 @@ class Radial extends Pie {
       elSeries.add(elTracks)
     }
 
+    if (w.config.targets) {
+      let targets = w.config.targets
+      let elTargets = this.drawTargets({
+        size,
+        centerX,
+        centerY,
+        colorArr,
+        targets
+      })
+      elSeries.add(elTargets.g)
+    }
+
     let elG = this.drawArcs({
       size,
       centerX,
@@ -107,6 +120,18 @@ class Radial extends Pie {
     }
 
     ret.add(elSeries)
+
+    if (w.config.plotOptions.radialBar.starts.show) {
+      let targets = w.config.targets
+      let elStarts = this.drawStarts({
+        size,
+        centerX,
+        centerY,
+        colorArr,
+        targets
+      })
+      elSeries.add(elStarts.g)
+    }
 
     return ret
   }
@@ -189,6 +214,587 @@ class Radial extends Pie {
     }
 
     return g
+  }
+
+  drawStarts(opts) {
+    let w = this.w
+    // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, targets
+
+    let graphics = new Graphics(this.ctx)
+    let fill = new Fill(this.ctx)
+    let filters = new Filters(this.ctx)
+    let g = graphics.group()
+
+    let strokeWidth = this.getStrokeWidth(opts)
+    opts.size = opts.size - strokeWidth / 2
+
+    let hollowFillID = w.config.plotOptions.radialBar.hollow.background
+    let hollowSize =
+      opts.size -
+      strokeWidth * opts.targets.length -
+      this.margin * opts.targets.length -
+      (strokeWidth *
+        parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10)) /
+        100 /
+        2
+
+    let hollowRadius = hollowSize - w.config.plotOptions.radialBar.hollow.margin
+
+    if (w.config.plotOptions.radialBar.hollow.image !== undefined) {
+      hollowFillID = this.drawHollowImage(opts, g, hollowSize, hollowFillID)
+    }
+
+    let elHollow = this.drawHollow({
+      size: hollowRadius,
+      centerX: opts.centerX,
+      centerY: opts.centerY,
+      fill: hollowFillID ? hollowFillID : 'transparent'
+    })
+
+    if (w.config.plotOptions.radialBar.hollow.dropShadow.enabled) {
+      const shadow = w.config.plotOptions.radialBar.hollow.dropShadow
+      filters.dropShadow(elHollow, shadow)
+    }
+
+    let reverseLoop = false
+    if (w.config.plotOptions.radialBar.inverseOrder) {
+      reverseLoop = true
+    }
+
+    for (
+      let i = reverseLoop ? opts.targets.length - 1 : 0;
+      reverseLoop ? i >= 0 : i < opts.targets.length;
+      reverseLoop ? i-- : i++
+    ) {
+      let elRadialBarArc = graphics.group({
+        class: `apexcharts-start apexcharts-radial-start`,
+        seriesName: Utils.escapeString(w.globals.seriesNames[i] + '-start')
+      })
+      g.add(elRadialBarArc)
+
+      elRadialBarArc.attr({
+        rel: i + 1,
+        'data:realIndex': i
+      })
+
+      this.ctx.series.addCollapsedClassToSeries(elRadialBarArc, i)
+
+      opts.size = opts.size - strokeWidth - this.margin
+
+      let pathFill = fill.fillPath({
+        seriesNumber: i,
+        size: opts.size,
+        value: opts.targets[i]
+      })
+
+      let startAngle = this.startAngle
+      let prevStartAngle
+
+      // if data exceeds 100 or -100, make it 100 or -100
+      let dataValue
+      if (opts.targets[i] > 100) {
+        dataValue = 1
+      } else if (opts.targets[i] < -100) {
+        dataValue = -1
+      } else {
+        dataValue = opts.targets[i] / 100
+      }
+
+      let rotateCounterClockwise = opts.targets[i] < 0
+
+      let endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle
+
+      let prevEndAngle
+      if (w.globals.dataChanged) {
+        let prevValue
+        if (w.globals.previousPaths[i] > 100) {
+          prevValue = 1
+        } else if (w.globals.previousPaths[i] < -100) {
+          prevValue = -1
+        } else {
+          prevValue = w.globals.previousPaths[i] / 100
+        }
+        prevStartAngle = this.startAngle
+        prevEndAngle =
+          Math.round((this.totalAngle * prevValue) / 100) + prevStartAngle
+      }
+
+      const currFullAngle = Math.abs(endAngle) + Math.abs(startAngle)
+      if (currFullAngle >= 360) {
+        endAngle = endAngle - 0.01
+      } else if (currFullAngle <= -360) {
+        endAngle = endAngle + 0.01
+      }
+
+      const prevFullAngle = Math.abs(prevEndAngle) + Math.abs(prevStartAngle)
+      if (prevFullAngle >= 360) {
+        prevEndAngle = prevEndAngle - 0.01
+      } else if (prevFullAngle <= -360) {
+        prevEndAngle = prevEndAngle + 0.01
+      }
+
+      let angle = endAngle - startAngle
+
+      const dashArray = Array.isArray(w.config.stroke.dashArray)
+        ? w.config.stroke.dashArray[i]
+        : w.config.stroke.dashArray
+
+      let elPath = graphics.drawPath({
+        d: '',
+        stroke: pathFill,
+        strokeWidth,
+        fill: '#fff',
+        fillOpacity: 1,
+        classes: 'apexcharts-radialbar-area apexcharts-radialbar-slice-' + i,
+        strokeDashArray: dashArray
+      })
+
+      Graphics.setAttrs(elPath.node, {
+        'data:angle': angle,
+        'data:value': opts.targets[i]
+      })
+
+      if (w.config.chart.dropShadow.enabled) {
+        const shadow = w.config.chart.dropShadow
+        filters.dropShadow(elPath, shadow, i)
+      }
+      filters.setSelectionFilter(elPath, 0, i)
+
+      this.addListeners(elPath, this.radialDataLabels)
+
+      elRadialBarArc.add(elPath)
+
+      elPath.attr({
+        index: 0,
+        j: i
+      })
+
+      let dur = 0
+      if (this.initialAnim && !w.globals.resized && !w.globals.dataChanged) {
+        dur = ((endAngle - startAngle) / 360) * w.config.chart.animations.speed
+
+        this.animDur = dur / (opts.targets.length * 1.2) + this.animDur
+        this.animBeginArr.push(this.animDur)
+      }
+
+      this.animateTargets(elPath, {
+        centerX: opts.centerX,
+        centerY: opts.centerY,
+        endAngle: rotateCounterClockwise ? startAngle - 0.01 : startAngle,
+        startAngle,
+        rotateCounterClockwise,
+        size: opts.size,
+        strokeWidth: strokeWidth / 2,
+        i,
+        totalItems: 2,
+        animBeginArr: this.animBeginArr,
+        dur: Math.abs(dur),
+        shouldSetPrevPaths: true,
+        easing: w.globals.easing,
+        isStart: true
+      })
+    }
+
+    return {
+      g,
+      elHollow
+    }
+  }
+
+  drawTargets(opts) {
+    let w = this.w
+    // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, targets
+
+    let graphics = new Graphics(this.ctx)
+    let fill = new Fill(this.ctx)
+    let filters = new Filters(this.ctx)
+    let g = graphics.group()
+
+    let strokeWidth = this.getStrokeWidth(opts)
+    opts.size = opts.size - strokeWidth / 2
+
+    let hollowFillID = w.config.plotOptions.radialBar.hollow.background
+    let hollowSize =
+      opts.size -
+      strokeWidth * opts.targets.length -
+      this.margin * opts.targets.length -
+      (strokeWidth *
+        parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10)) /
+        100 /
+        2
+
+    let hollowRadius = hollowSize - w.config.plotOptions.radialBar.hollow.margin
+
+    if (w.config.plotOptions.radialBar.hollow.image !== undefined) {
+      hollowFillID = this.drawHollowImage(opts, g, hollowSize, hollowFillID)
+    }
+
+    let elHollow = this.drawHollow({
+      size: hollowRadius,
+      centerX: opts.centerX,
+      centerY: opts.centerY,
+      fill: hollowFillID ? hollowFillID : 'transparent'
+    })
+
+    if (w.config.plotOptions.radialBar.hollow.dropShadow.enabled) {
+      const shadow = w.config.plotOptions.radialBar.hollow.dropShadow
+      filters.dropShadow(elHollow, shadow)
+    }
+
+    let reverseLoop = false
+    if (w.config.plotOptions.radialBar.inverseOrder) {
+      reverseLoop = true
+    }
+
+    for (
+      let i = reverseLoop ? opts.targets.length - 1 : 0;
+      reverseLoop ? i >= 0 : i < opts.targets.length;
+      reverseLoop ? i-- : i++
+    ) {
+      let elRadialBarArc = graphics.group({
+        class: `apexcharts-series apexcharts-radial-series`,
+        seriesName: Utils.escapeString(w.globals.seriesNames[i])
+      })
+      g.add(elRadialBarArc)
+
+      elRadialBarArc.attr({
+        rel: i + 1,
+        'data:realIndex': i
+      })
+
+      this.ctx.series.addCollapsedClassToSeries(elRadialBarArc, i)
+
+      opts.size = opts.size - strokeWidth - this.margin
+
+      let pathFill = fill.fillPath({
+        seriesNumber: i,
+        size: opts.size,
+        value: opts.targets[i]
+      })
+
+      let startAngle = this.startAngle
+      let prevStartAngle
+
+      // if data exceeds 100 or -100, make it 100 or -100
+      let dataValue
+      if (opts.targets[i] > 100) {
+        dataValue = 1
+      } else if (opts.targets[i] < -100) {
+        dataValue = -1
+      } else {
+        dataValue = opts.targets[i] / 100
+      }
+
+      let rotateCounterClockwise = opts.targets[i] < 0
+
+      let endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle
+
+      let prevEndAngle
+      if (w.globals.dataChanged) {
+        let prevValue
+        if (w.globals.previousPaths[i] > 100) {
+          prevValue = 1
+        } else if (w.globals.previousPaths[i] < -100) {
+          prevValue = -1
+        } else {
+          prevValue = w.globals.previousPaths[i] / 100
+        }
+        prevStartAngle = this.startAngle
+        prevEndAngle =
+          Math.round((this.totalAngle * prevValue) / 100) + prevStartAngle
+      }
+
+      const currFullAngle = Math.abs(endAngle) + Math.abs(startAngle)
+      if (currFullAngle >= 360) {
+        endAngle = endAngle - 0.01
+      } else if (currFullAngle <= -360) {
+        endAngle = endAngle + 0.01
+      }
+
+      const prevFullAngle = Math.abs(prevEndAngle) + Math.abs(prevStartAngle)
+      if (prevFullAngle >= 360) {
+        prevEndAngle = prevEndAngle - 0.01
+      } else if (prevFullAngle <= -360) {
+        prevEndAngle = prevEndAngle + 0.01
+      }
+
+      let angle = endAngle - startAngle
+
+      const dashArray = Array.isArray(w.config.stroke.dashArray)
+        ? w.config.stroke.dashArray[i]
+        : w.config.stroke.dashArray
+
+      let elPath = graphics.drawPath({
+        d: '',
+        stroke: pathFill,
+        strokeWidth,
+        fill: 'none',
+        fillOpacity: w.config.fill.opacity,
+        classes: 'apexcharts-radialbar-area apexcharts-radialbar-slice-' + i,
+        strokeDashArray: dashArray
+      })
+
+      Graphics.setAttrs(elPath.node, {
+        'data:angle': angle,
+        'data:value': opts.targets[i]
+      })
+
+      if (w.config.chart.dropShadow.enabled) {
+        const shadow = w.config.chart.dropShadow
+        filters.dropShadow(elPath, shadow, i)
+      }
+      filters.setSelectionFilter(elPath, 0, i)
+
+      this.addListeners(elPath, this.radialDataLabels)
+
+      elRadialBarArc.add(elPath)
+
+      elPath.attr({
+        index: 0,
+        j: i
+      })
+
+      let dur = 0
+      if (this.initialAnim && !w.globals.resized && !w.globals.dataChanged) {
+        dur = ((endAngle - startAngle) / 360) * w.config.chart.animations.speed
+
+        this.animDur = dur / (opts.targets.length * 1.2) + this.animDur
+        this.animBeginArr.push(this.animDur)
+      }
+
+      if (w.globals.dataChanged) {
+        dur =
+          ((endAngle - startAngle) / 360) *
+          w.config.chart.animations.dynamicAnimation.speed
+
+        this.animDur = dur / (opts.targets.length * 1.2) + this.animDur
+        this.animBeginArr.push(this.animDur)
+      }
+
+      this.animateTargets(elPath, {
+        centerX: opts.centerX,
+        centerY: opts.centerY,
+        endAngle,
+        startAngle,
+        prevEndAngle,
+        prevStartAngle,
+        rotateCounterClockwise,
+        size: opts.size,
+        strokeWidth,
+        i,
+        totalItems: 2,
+        animBeginArr: this.animBeginArr,
+        dur: Math.abs(dur),
+        shouldSetPrevPaths: true,
+        easing: w.globals.easing
+      })
+    }
+
+    return {
+      g,
+      elHollow
+    }
+  }
+
+  animateTargets(el, opts) {
+    let w = this.w
+    let me = this
+
+    let angle =
+      opts.endAngle < opts.startAngle
+        ? this.fullAngle + opts.endAngle - opts.startAngle
+        : opts.endAngle - opts.startAngle
+    let prevAngle = angle
+
+    let fromStartAngle =
+      opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle
+    let toStartAngle =
+      opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle
+
+    if (opts.prevStartAngle !== undefined && opts.prevEndAngle !== undefined) {
+      fromStartAngle = opts.prevEndAngle
+      prevAngle =
+        opts.prevEndAngle < opts.prevStartAngle
+          ? this.fullAngle + opts.prevEndAngle - opts.prevStartAngle
+          : opts.prevEndAngle - opts.prevStartAngle
+    }
+    if (opts.i === w.config.series.length - 1) {
+      // some adjustments for the last overlapping paths
+      if (angle + toStartAngle > this.fullAngle) {
+        opts.endAngle = opts.endAngle - (angle + toStartAngle)
+      } else if (angle + toStartAngle < this.fullAngle) {
+        opts.endAngle =
+          opts.endAngle + (this.fullAngle - (angle + toStartAngle))
+      }
+    }
+
+    if (angle === this.fullAngle) angle = this.fullAngle - 0.01
+
+    me.animateTarget(el, fromStartAngle, toStartAngle, angle, prevAngle, opts)
+  }
+
+  animateTarget(el, fromStartAngle, toStartAngle, angle, prevAngle, opts) {
+    let me = this
+    const w = this.w
+    const animations = new Animations(this.ctx)
+
+    let size = opts.size
+
+    let path
+
+    if (isNaN(fromStartAngle) || isNaN(prevAngle)) {
+      fromStartAngle = toStartAngle
+      prevAngle = angle
+      opts.dur = 0
+    }
+
+    let currAngle = angle
+    let startAngle = toStartAngle
+    let fromAngle
+
+    if (opts.rotateCounterClockwise) {
+      fromAngle =
+        fromStartAngle < toStartAngle
+          ? fromStartAngle - toStartAngle
+          : this.fullAngle + fromStartAngle - toStartAngle
+    } else {
+      fromAngle =
+        fromStartAngle < toStartAngle
+          ? this.fullAngle + fromStartAngle - toStartAngle
+          : fromStartAngle - toStartAngle
+    }
+
+    if (w.globals.dataChanged && opts.shouldSetPrevPaths) {
+      // to avoid flicker when updating, set prev path first and then animate from there
+      if (opts.prevEndAngle) {
+        path = me.getTargetPath({
+          me,
+          startAngle: opts.prevStartAngle,
+          angle:
+            opts.prevEndAngle < opts.prevStartAngle
+              ? this.fullAngle + opts.prevEndAngle - opts.prevStartAngle
+              : opts.prevEndAngle - opts.prevStartAngle,
+          strokeWidth: opts.strokeWidth,
+          size,
+          isStart: opts.isStart
+        })
+        el.attr({ d: path, 'stroke-width': opts.strokeWidth * 0.7 })
+      }
+    }
+
+    if (opts.dur !== 0) {
+      el.animate(opts.dur, w.globals.easing, opts.animBeginArr[opts.i])
+        .afterAll(() => {
+          if (opts.i === w.config.series.length - 1) {
+            animations.animationCompleted(el)
+          }
+        })
+        .during((pos) => {
+          currAngle = opts.rotateCounterClockwise
+            ? this.fullAngle - fromAngle - (fromAngle - angle) * pos
+            : fromAngle + (angle - fromAngle) * pos
+
+          if (opts.animateStartingPos) {
+            //TODO: confirm this works
+            if (opts.rotateCounterClockwise) {
+              currAngle = this.fullAngle - fromAngle - (fromAngle - angle) * pos
+              startAngle =
+                this.fullAngle -
+                fromAngle -
+                prevAngle +
+                (toStartAngle - (prevAngle - fromStartAngle)) * pos
+            } else {
+              currAngle = prevAngle + (angle - prevAngle) * pos
+              startAngle =
+                fromStartAngle -
+                prevAngle +
+                (toStartAngle - (fromStartAngle - prevAngle)) * pos
+            }
+          }
+
+          path = me.getTargetPath({
+            me,
+            startAngle,
+            angle: currAngle,
+            strokeWidth: opts.strokeWidth,
+            size,
+            isStart: opts.isStart
+          })
+
+          el.node.setAttribute('data:pathOrig', path)
+
+          el.attr({
+            d: path,
+            'stroke-width': opts.strokeWidth * 0.7
+          })
+        })
+    } else {
+      path = me.getTargetPath({
+        me,
+        startAngle,
+        angle: opts.rotateCounterClockwise ? -this.fullAngle + angle : angle,
+        strokeWidth: opts.strokeWidth,
+        size,
+        isStart: opts.isStart
+      })
+
+      if (!opts.isTrack) {
+        w.globals.animationEnded = true
+      }
+      el.node.setAttribute('data:pathOrig', path)
+
+      el.attr({
+        d: path,
+        'stroke-width': opts.strokeWidth * 0.7
+      })
+    }
+  }
+
+  getTargetPath({ me, startAngle, angle, size, strokeWidth, isStart }) {
+    let endDeg = angle + startAngle
+    // prevent overlap
+    if (
+      Math.ceil(endDeg) >=
+      this.fullAngle +
+        (this.w.config.plotOptions.pie.startAngle % this.fullAngle)
+    ) {
+      endDeg =
+        this.fullAngle +
+        (this.w.config.plotOptions.pie.startAngle % this.fullAngle) -
+        0.01
+    }
+    if (Math.ceil(endDeg) > this.fullAngle) endDeg -= this.fullAngle
+
+    let endRadians = (Math.PI * (endDeg - 90)) / 180
+
+    let x2 = me.centerX + size * Math.cos(endRadians)
+    let y2 = me.centerY + size * Math.sin(endRadians)
+
+    const r = isStart ? strokeWidth : strokeWidth * 0.35
+
+    const target = [
+      'M',
+      x2 - r,
+      y2,
+      'a',
+      r,
+      r,
+      0,
+      1,
+      0,
+      r * 2,
+      0,
+      'a',
+      r,
+      r,
+      0,
+      1,
+      0,
+      -(r * 2),
+      0
+    ]
+
+    return target.join(' ')
   }
 
   drawArcs(opts) {
@@ -479,11 +1085,12 @@ class Radial extends Pie {
 
   getStrokeWidth(opts) {
     const w = this.w
+    const units = opts.series || opts.targets
     return (
       (opts.size *
         (100 - parseInt(w.config.plotOptions.radialBar.hollow.size, 10))) /
         100 /
-        (opts.series.length + 1) -
+        (units.length + 1) -
       this.margin
     )
   }

@@ -20876,6 +20876,18 @@
           elSeries.add(elTracks);
         }
 
+        if (w.config.targets) {
+          var targets = w.config.targets;
+          var elTargets = this.drawTargets({
+            size: size,
+            centerX: centerX,
+            centerY: centerY,
+            colorArr: colorArr,
+            targets: targets
+          });
+          elSeries.add(elTargets.g);
+        }
+
         var elG = this.drawArcs({
           size: size,
           centerX: centerX,
@@ -20908,6 +20920,19 @@
         }
 
         ret.add(elSeries);
+
+        if (w.config.plotOptions.radialBar.starts.show) {
+          var _targets = w.config.targets;
+          var elStarts = this.drawStarts({
+            size: size,
+            centerX: centerX,
+            centerY: centerY,
+            colorArr: colorArr,
+            targets: _targets
+          });
+          elSeries.add(elStarts.g);
+        }
+
         return ret;
       }
     }, {
@@ -20974,6 +20999,484 @@
         }
 
         return g;
+      }
+    }, {
+      key: "drawStarts",
+      value: function drawStarts(opts) {
+        var w = this.w; // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, targets
+
+        var graphics = new Graphics(this.ctx);
+        var fill = new Fill(this.ctx);
+        var filters = new Filters(this.ctx);
+        var g = graphics.group();
+        var strokeWidth = this.getStrokeWidth(opts);
+        opts.size = opts.size - strokeWidth / 2;
+        var hollowFillID = w.config.plotOptions.radialBar.hollow.background;
+        var hollowSize = opts.size - strokeWidth * opts.targets.length - this.margin * opts.targets.length - strokeWidth * parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10) / 100 / 2;
+        var hollowRadius = hollowSize - w.config.plotOptions.radialBar.hollow.margin;
+
+        if (w.config.plotOptions.radialBar.hollow.image !== undefined) {
+          hollowFillID = this.drawHollowImage(opts, g, hollowSize, hollowFillID);
+        }
+
+        var elHollow = this.drawHollow({
+          size: hollowRadius,
+          centerX: opts.centerX,
+          centerY: opts.centerY,
+          fill: hollowFillID ? hollowFillID : 'transparent'
+        });
+
+        if (w.config.plotOptions.radialBar.hollow.dropShadow.enabled) {
+          var shadow = w.config.plotOptions.radialBar.hollow.dropShadow;
+          filters.dropShadow(elHollow, shadow);
+        }
+
+        var reverseLoop = false;
+
+        if (w.config.plotOptions.radialBar.inverseOrder) {
+          reverseLoop = true;
+        }
+
+        for (var i = reverseLoop ? opts.targets.length - 1 : 0; reverseLoop ? i >= 0 : i < opts.targets.length; reverseLoop ? i-- : i++) {
+          var elRadialBarArc = graphics.group({
+            class: "apexcharts-start apexcharts-radial-start",
+            seriesName: Utils.escapeString(w.globals.seriesNames[i] + '-start')
+          });
+          g.add(elRadialBarArc);
+          elRadialBarArc.attr({
+            rel: i + 1,
+            'data:realIndex': i
+          });
+          this.ctx.series.addCollapsedClassToSeries(elRadialBarArc, i);
+          opts.size = opts.size - strokeWidth - this.margin;
+          var pathFill = fill.fillPath({
+            seriesNumber: i,
+            size: opts.size,
+            value: opts.targets[i]
+          });
+          var startAngle = this.startAngle;
+          var prevStartAngle = void 0; // if data exceeds 100 or -100, make it 100 or -100
+
+          var dataValue = void 0;
+
+          if (opts.targets[i] > 100) {
+            dataValue = 1;
+          } else if (opts.targets[i] < -100) {
+            dataValue = -1;
+          } else {
+            dataValue = opts.targets[i] / 100;
+          }
+
+          var rotateCounterClockwise = opts.targets[i] < 0;
+          var endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle;
+          var prevEndAngle = void 0;
+
+          if (w.globals.dataChanged) {
+            var prevValue = void 0;
+
+            if (w.globals.previousPaths[i] > 100) {
+              prevValue = 1;
+            } else if (w.globals.previousPaths[i] < -100) {
+              prevValue = -1;
+            } else {
+              prevValue = w.globals.previousPaths[i] / 100;
+            }
+
+            prevStartAngle = this.startAngle;
+            prevEndAngle = Math.round(this.totalAngle * prevValue / 100) + prevStartAngle;
+          }
+
+          var currFullAngle = Math.abs(endAngle) + Math.abs(startAngle);
+
+          if (currFullAngle >= 360) {
+            endAngle = endAngle - 0.01;
+          } else if (currFullAngle <= -360) {
+            endAngle = endAngle + 0.01;
+          }
+
+          var prevFullAngle = Math.abs(prevEndAngle) + Math.abs(prevStartAngle);
+
+          if (prevFullAngle >= 360) {
+            prevEndAngle = prevEndAngle - 0.01;
+          } else if (prevFullAngle <= -360) {
+            prevEndAngle = prevEndAngle + 0.01;
+          }
+
+          var angle = endAngle - startAngle;
+          var dashArray = Array.isArray(w.config.stroke.dashArray) ? w.config.stroke.dashArray[i] : w.config.stroke.dashArray;
+          var elPath = graphics.drawPath({
+            d: '',
+            stroke: pathFill,
+            strokeWidth: strokeWidth,
+            fill: '#fff',
+            fillOpacity: 1,
+            classes: 'apexcharts-radialbar-area apexcharts-radialbar-slice-' + i,
+            strokeDashArray: dashArray
+          });
+          Graphics.setAttrs(elPath.node, {
+            'data:angle': angle,
+            'data:value': opts.targets[i]
+          });
+
+          if (w.config.chart.dropShadow.enabled) {
+            var _shadow = w.config.chart.dropShadow;
+            filters.dropShadow(elPath, _shadow, i);
+          }
+
+          filters.setSelectionFilter(elPath, 0, i);
+          this.addListeners(elPath, this.radialDataLabels);
+          elRadialBarArc.add(elPath);
+          elPath.attr({
+            index: 0,
+            j: i
+          });
+          var dur = 0;
+
+          if (this.initialAnim && !w.globals.resized && !w.globals.dataChanged) {
+            dur = (endAngle - startAngle) / 360 * w.config.chart.animations.speed;
+            this.animDur = dur / (opts.targets.length * 1.2) + this.animDur;
+            this.animBeginArr.push(this.animDur);
+          }
+
+          this.animateTargets(elPath, {
+            centerX: opts.centerX,
+            centerY: opts.centerY,
+            endAngle: rotateCounterClockwise ? startAngle - 0.01 : startAngle,
+            startAngle: startAngle,
+            rotateCounterClockwise: rotateCounterClockwise,
+            size: opts.size,
+            strokeWidth: strokeWidth / 2,
+            i: i,
+            totalItems: 2,
+            animBeginArr: this.animBeginArr,
+            dur: Math.abs(dur),
+            shouldSetPrevPaths: true,
+            easing: w.globals.easing,
+            isStart: true
+          });
+        }
+
+        return {
+          g: g,
+          elHollow: elHollow
+        };
+      }
+    }, {
+      key: "drawTargets",
+      value: function drawTargets(opts) {
+        var w = this.w; // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, targets
+
+        var graphics = new Graphics(this.ctx);
+        var fill = new Fill(this.ctx);
+        var filters = new Filters(this.ctx);
+        var g = graphics.group();
+        var strokeWidth = this.getStrokeWidth(opts);
+        opts.size = opts.size - strokeWidth / 2;
+        var hollowFillID = w.config.plotOptions.radialBar.hollow.background;
+        var hollowSize = opts.size - strokeWidth * opts.targets.length - this.margin * opts.targets.length - strokeWidth * parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10) / 100 / 2;
+        var hollowRadius = hollowSize - w.config.plotOptions.radialBar.hollow.margin;
+
+        if (w.config.plotOptions.radialBar.hollow.image !== undefined) {
+          hollowFillID = this.drawHollowImage(opts, g, hollowSize, hollowFillID);
+        }
+
+        var elHollow = this.drawHollow({
+          size: hollowRadius,
+          centerX: opts.centerX,
+          centerY: opts.centerY,
+          fill: hollowFillID ? hollowFillID : 'transparent'
+        });
+
+        if (w.config.plotOptions.radialBar.hollow.dropShadow.enabled) {
+          var shadow = w.config.plotOptions.radialBar.hollow.dropShadow;
+          filters.dropShadow(elHollow, shadow);
+        }
+
+        var reverseLoop = false;
+
+        if (w.config.plotOptions.radialBar.inverseOrder) {
+          reverseLoop = true;
+        }
+
+        for (var i = reverseLoop ? opts.targets.length - 1 : 0; reverseLoop ? i >= 0 : i < opts.targets.length; reverseLoop ? i-- : i++) {
+          var elRadialBarArc = graphics.group({
+            class: "apexcharts-series apexcharts-radial-series",
+            seriesName: Utils.escapeString(w.globals.seriesNames[i])
+          });
+          g.add(elRadialBarArc);
+          elRadialBarArc.attr({
+            rel: i + 1,
+            'data:realIndex': i
+          });
+          this.ctx.series.addCollapsedClassToSeries(elRadialBarArc, i);
+          opts.size = opts.size - strokeWidth - this.margin;
+          var pathFill = fill.fillPath({
+            seriesNumber: i,
+            size: opts.size,
+            value: opts.targets[i]
+          });
+          var startAngle = this.startAngle;
+          var prevStartAngle = void 0; // if data exceeds 100 or -100, make it 100 or -100
+
+          var dataValue = void 0;
+
+          if (opts.targets[i] > 100) {
+            dataValue = 1;
+          } else if (opts.targets[i] < -100) {
+            dataValue = -1;
+          } else {
+            dataValue = opts.targets[i] / 100;
+          }
+
+          var rotateCounterClockwise = opts.targets[i] < 0;
+          var endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle;
+          var prevEndAngle = void 0;
+
+          if (w.globals.dataChanged) {
+            var prevValue = void 0;
+
+            if (w.globals.previousPaths[i] > 100) {
+              prevValue = 1;
+            } else if (w.globals.previousPaths[i] < -100) {
+              prevValue = -1;
+            } else {
+              prevValue = w.globals.previousPaths[i] / 100;
+            }
+
+            prevStartAngle = this.startAngle;
+            prevEndAngle = Math.round(this.totalAngle * prevValue / 100) + prevStartAngle;
+          }
+
+          var currFullAngle = Math.abs(endAngle) + Math.abs(startAngle);
+
+          if (currFullAngle >= 360) {
+            endAngle = endAngle - 0.01;
+          } else if (currFullAngle <= -360) {
+            endAngle = endAngle + 0.01;
+          }
+
+          var prevFullAngle = Math.abs(prevEndAngle) + Math.abs(prevStartAngle);
+
+          if (prevFullAngle >= 360) {
+            prevEndAngle = prevEndAngle - 0.01;
+          } else if (prevFullAngle <= -360) {
+            prevEndAngle = prevEndAngle + 0.01;
+          }
+
+          var angle = endAngle - startAngle;
+          var dashArray = Array.isArray(w.config.stroke.dashArray) ? w.config.stroke.dashArray[i] : w.config.stroke.dashArray;
+          var elPath = graphics.drawPath({
+            d: '',
+            stroke: pathFill,
+            strokeWidth: strokeWidth,
+            fill: 'none',
+            fillOpacity: w.config.fill.opacity,
+            classes: 'apexcharts-radialbar-area apexcharts-radialbar-slice-' + i,
+            strokeDashArray: dashArray
+          });
+          Graphics.setAttrs(elPath.node, {
+            'data:angle': angle,
+            'data:value': opts.targets[i]
+          });
+
+          if (w.config.chart.dropShadow.enabled) {
+            var _shadow2 = w.config.chart.dropShadow;
+            filters.dropShadow(elPath, _shadow2, i);
+          }
+
+          filters.setSelectionFilter(elPath, 0, i);
+          this.addListeners(elPath, this.radialDataLabels);
+          elRadialBarArc.add(elPath);
+          elPath.attr({
+            index: 0,
+            j: i
+          });
+          var dur = 0;
+
+          if (this.initialAnim && !w.globals.resized && !w.globals.dataChanged) {
+            dur = (endAngle - startAngle) / 360 * w.config.chart.animations.speed;
+            this.animDur = dur / (opts.targets.length * 1.2) + this.animDur;
+            this.animBeginArr.push(this.animDur);
+          }
+
+          if (w.globals.dataChanged) {
+            dur = (endAngle - startAngle) / 360 * w.config.chart.animations.dynamicAnimation.speed;
+            this.animDur = dur / (opts.targets.length * 1.2) + this.animDur;
+            this.animBeginArr.push(this.animDur);
+          }
+
+          this.animateTargets(elPath, {
+            centerX: opts.centerX,
+            centerY: opts.centerY,
+            endAngle: endAngle,
+            startAngle: startAngle,
+            prevEndAngle: prevEndAngle,
+            prevStartAngle: prevStartAngle,
+            rotateCounterClockwise: rotateCounterClockwise,
+            size: opts.size,
+            strokeWidth: strokeWidth,
+            i: i,
+            totalItems: 2,
+            animBeginArr: this.animBeginArr,
+            dur: Math.abs(dur),
+            shouldSetPrevPaths: true,
+            easing: w.globals.easing
+          });
+        }
+
+        return {
+          g: g,
+          elHollow: elHollow
+        };
+      }
+    }, {
+      key: "animateTargets",
+      value: function animateTargets(el, opts) {
+        var w = this.w;
+        var me = this;
+        var angle = opts.endAngle < opts.startAngle ? this.fullAngle + opts.endAngle - opts.startAngle : opts.endAngle - opts.startAngle;
+        var prevAngle = angle;
+        var fromStartAngle = opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle;
+        var toStartAngle = opts.endAngle > 0 ? opts.startAngle : this.fullAngle + opts.startAngle;
+
+        if (opts.prevStartAngle !== undefined && opts.prevEndAngle !== undefined) {
+          fromStartAngle = opts.prevEndAngle;
+          prevAngle = opts.prevEndAngle < opts.prevStartAngle ? this.fullAngle + opts.prevEndAngle - opts.prevStartAngle : opts.prevEndAngle - opts.prevStartAngle;
+        }
+
+        if (opts.i === w.config.series.length - 1) {
+          // some adjustments for the last overlapping paths
+          if (angle + toStartAngle > this.fullAngle) {
+            opts.endAngle = opts.endAngle - (angle + toStartAngle);
+          } else if (angle + toStartAngle < this.fullAngle) {
+            opts.endAngle = opts.endAngle + (this.fullAngle - (angle + toStartAngle));
+          }
+        }
+
+        if (angle === this.fullAngle) angle = this.fullAngle - 0.01;
+        me.animateTarget(el, fromStartAngle, toStartAngle, angle, prevAngle, opts);
+      }
+    }, {
+      key: "animateTarget",
+      value: function animateTarget(el, fromStartAngle, toStartAngle, angle, prevAngle, opts) {
+        var _this2 = this;
+
+        var me = this;
+        var w = this.w;
+        var animations = new Animations(this.ctx);
+        var size = opts.size;
+        var path;
+
+        if (isNaN(fromStartAngle) || isNaN(prevAngle)) {
+          fromStartAngle = toStartAngle;
+          prevAngle = angle;
+          opts.dur = 0;
+        }
+
+        var currAngle = angle;
+        var startAngle = toStartAngle;
+        var fromAngle;
+
+        if (opts.rotateCounterClockwise) {
+          fromAngle = fromStartAngle < toStartAngle ? fromStartAngle - toStartAngle : this.fullAngle + fromStartAngle - toStartAngle;
+        } else {
+          fromAngle = fromStartAngle < toStartAngle ? this.fullAngle + fromStartAngle - toStartAngle : fromStartAngle - toStartAngle;
+        }
+
+        if (w.globals.dataChanged && opts.shouldSetPrevPaths) {
+          // to avoid flicker when updating, set prev path first and then animate from there
+          if (opts.prevEndAngle) {
+            path = me.getTargetPath({
+              me: me,
+              startAngle: opts.prevStartAngle,
+              angle: opts.prevEndAngle < opts.prevStartAngle ? this.fullAngle + opts.prevEndAngle - opts.prevStartAngle : opts.prevEndAngle - opts.prevStartAngle,
+              strokeWidth: opts.strokeWidth,
+              size: size,
+              isStart: opts.isStart
+            });
+            el.attr({
+              d: path,
+              'stroke-width': opts.strokeWidth * 0.7
+            });
+          }
+        }
+
+        if (opts.dur !== 0) {
+          el.animate(opts.dur, w.globals.easing, opts.animBeginArr[opts.i]).afterAll(function () {
+            if (opts.i === w.config.series.length - 1) {
+              animations.animationCompleted(el);
+            }
+          }).during(function (pos) {
+            currAngle = opts.rotateCounterClockwise ? _this2.fullAngle - fromAngle - (fromAngle - angle) * pos : fromAngle + (angle - fromAngle) * pos;
+
+            if (opts.animateStartingPos) {
+              //TODO: confirm this works
+              if (opts.rotateCounterClockwise) {
+                currAngle = _this2.fullAngle - fromAngle - (fromAngle - angle) * pos;
+                startAngle = _this2.fullAngle - fromAngle - prevAngle + (toStartAngle - (prevAngle - fromStartAngle)) * pos;
+              } else {
+                currAngle = prevAngle + (angle - prevAngle) * pos;
+                startAngle = fromStartAngle - prevAngle + (toStartAngle - (fromStartAngle - prevAngle)) * pos;
+              }
+            }
+
+            path = me.getTargetPath({
+              me: me,
+              startAngle: startAngle,
+              angle: currAngle,
+              strokeWidth: opts.strokeWidth,
+              size: size,
+              isStart: opts.isStart
+            });
+            el.node.setAttribute('data:pathOrig', path);
+            el.attr({
+              d: path,
+              'stroke-width': opts.strokeWidth * 0.7
+            });
+          });
+        } else {
+          path = me.getTargetPath({
+            me: me,
+            startAngle: startAngle,
+            angle: opts.rotateCounterClockwise ? -this.fullAngle + angle : angle,
+            strokeWidth: opts.strokeWidth,
+            size: size,
+            isStart: opts.isStart
+          });
+
+          if (!opts.isTrack) {
+            w.globals.animationEnded = true;
+          }
+
+          el.node.setAttribute('data:pathOrig', path);
+          el.attr({
+            d: path,
+            'stroke-width': opts.strokeWidth * 0.7
+          });
+        }
+      }
+    }, {
+      key: "getTargetPath",
+      value: function getTargetPath(_ref) {
+        var me = _ref.me,
+            startAngle = _ref.startAngle,
+            angle = _ref.angle,
+            size = _ref.size,
+            strokeWidth = _ref.strokeWidth,
+            isStart = _ref.isStart;
+        var endDeg = angle + startAngle; // prevent overlap
+
+        if (Math.ceil(endDeg) >= this.fullAngle + this.w.config.plotOptions.pie.startAngle % this.fullAngle) {
+          endDeg = this.fullAngle + this.w.config.plotOptions.pie.startAngle % this.fullAngle - 0.01;
+        }
+
+        if (Math.ceil(endDeg) > this.fullAngle) endDeg -= this.fullAngle;
+        var endRadians = Math.PI * (endDeg - 90) / 180;
+        var x2 = me.centerX + size * Math.cos(endRadians);
+        var y2 = me.centerY + size * Math.sin(endRadians);
+        var r = isStart ? strokeWidth : strokeWidth * 0.35;
+        var target = ['M', x2 - r, y2, 'a', r, r, 0, 1, 0, r * 2, 0, 'a', r, r, 0, 1, 0, -(r * 2), 0];
+        return target.join(' ');
       }
     }, {
       key: "drawArcs",
@@ -21119,8 +21622,8 @@
           });
 
           if (w.config.chart.dropShadow.enabled) {
-            var _shadow = w.config.chart.dropShadow;
-            filters.dropShadow(elPath, _shadow, i);
+            var _shadow3 = w.config.chart.dropShadow;
+            filters.dropShadow(elPath, _shadow3, i);
           }
 
           filters.setSelectionFilter(elPath, 0, i);
@@ -21223,7 +21726,8 @@
       key: "getStrokeWidth",
       value: function getStrokeWidth(opts) {
         var w = this.w;
-        return opts.size * (100 - parseInt(w.config.plotOptions.radialBar.hollow.size, 10)) / 100 / (opts.series.length + 1) - this.margin;
+        var units = opts.series || opts.targets;
+        return opts.size * (100 - parseInt(w.config.plotOptions.radialBar.hollow.size, 10)) / 100 / (units.length + 1) - this.margin;
       }
     }]);
 
