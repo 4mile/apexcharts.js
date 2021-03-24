@@ -274,7 +274,11 @@ class Legend {
 
     w.globals.dom.elWrap.addEventListener('click', self.onLegendClick, true)
 
-    if (w.config.legend.onItemHover.highlightDataSeries) {
+    if (
+      w.config.legend.onItemHover.highlightDataSeries ||
+      w.config.legend.onMouseIn ||
+      w.config.legend.onMouseOut
+    ) {
       w.globals.dom.elWrap.addEventListener(
         'mousemove',
         self.onLegendHovered,
@@ -392,23 +396,39 @@ class Legend {
       e.target.classList.contains('apexcharts-legend-text') ||
       e.target.classList.contains('apexcharts-legend-marker')
 
-    if (w.config.chart.type !== 'heatmap' && !this.isBarsDistributed) {
-      if (
-        !e.target.classList.contains('apexcharts-inactive-legend') &&
-        hoverOverLegend
-      ) {
-        let series = new Series(this.ctx)
-        series.toggleSeriesOnHover(e, e.target)
-      }
-    } else {
-      // for heatmap handling
-      if (hoverOverLegend) {
-        let seriesCnt = parseInt(e.target.getAttribute('rel'), 10) - 1
-        this.ctx.events.fireEvent('legendHover', [this.ctx, seriesCnt, this.w])
+    const legendMouseIn = this.w.config.legend.onMouseIn
+    const legendMouseOut = this.w.config.legend.onMouseOut
 
-        let series = new Series(this.ctx)
-        series.highlightRangeInSeries(e, e.target)
+    let seriesCnt = parseInt(e.target.getAttribute('rel'), 10) - 1
+
+    if (!(legendMouseIn || legendMouseOut)) {
+      if (w.config.chart.type !== 'heatmap' && !this.isBarsDistributed) {
+        if (
+          !e.target.classList.contains('apexcharts-inactive-legend') &&
+          hoverOverLegend
+        ) {
+          let series = new Series(this.ctx)
+          series.toggleSeriesOnHover(e, e.target)
+        }
+      } else {
+        // for heatmap handling
+        if (hoverOverLegend) {
+          this.ctx.events.fireEvent('legendHover', [
+            this.ctx,
+            seriesCnt,
+            this.w
+          ])
+          let series = new Series(this.ctx)
+          series.highlightRangeInSeries(e, e.target)
+        }
       }
+    }
+
+    if (typeof legendMouseIn === 'function' && hoverOverLegend) {
+      //this.ctx.events.fireEvent('legendHover', [this.ctx, seriesCnt, this.w])
+      legendMouseIn(this.ctx, seriesCnt, w)
+    } else if (typeof legendMouseOut === 'function' && !hoverOverLegend) {
+      legendMouseOut(this.ctx, seriesCnt, w)
     }
   }
 
