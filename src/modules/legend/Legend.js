@@ -205,7 +205,7 @@ class Legend {
       elLegendText.style.fontWeight = w.config.legend.fontWeight
       elLegendText.style.fontFamily = fontFamily || w.config.chart.fontFamily
       elLegendText.style.width = w.config.legend.width
-        ? w.config.legend.width - 25 + 'px'
+        ? w.config.legend.width - 45 + 'px'
         : ''
 
       Graphics.setAttrs(elLegendText, {
