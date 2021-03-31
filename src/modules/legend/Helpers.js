@@ -44,7 +44,9 @@ export default class Helpers {
       }	
       .apexcharts-legend-text {	
         position: relative;	
-        font-size: 14px;	
+        font-size: 14px;
+        display: inline-block;
+        margin-top: 3px;
       }	
       .apexcharts-legend-text *, .apexcharts-legend-marker * {	
         pointer-events: none;	
@@ -53,8 +55,10 @@ export default class Helpers {
         position: relative;	
         display: inline-block;	
         cursor: pointer;	
-        margin-right: 3px;	
+        margin-right: 3px;
+        margin-top: 5px;
         border-style: solid;
+        vertical-align: top;
       }	
       	
       .apexcharts-legend.apexcharts-align-right .apexcharts-legend-series, .apexcharts-legend.apexcharts-align-left .apexcharts-legend-series{	
