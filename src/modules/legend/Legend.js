@@ -428,9 +428,12 @@ class Legend {
     }
 
     if (typeof legendMouseIn === 'function' && hoverOverLegend) {
-      //this.ctx.events.fireEvent('legendHover', [this.ctx, seriesCnt, this.w])
+      this.ctx.events.fireEvent('legendHover', [this.ctx, seriesCnt, this.w])
+      this.legendHelpers.clearHoverStates()
+      e.target.classList.add('apexcharts-legend-text-hovered')
       legendMouseIn(this.ctx, seriesCnt, w)
     } else if (typeof legendMouseOut === 'function' && !hoverOverLegend) {
+      this.legendHelpers.clearHoverStates()
       legendMouseOut(this.ctx, seriesCnt, w)
     }
   }

@@ -63,6 +63,7 @@ export default class InitCtxVariables {
       'addPointAnnotation',
       'clearAnnotations',
       'removeAnnotation',
+      'clearLegendHovers',
       'paper',
       'destroy'
     ]

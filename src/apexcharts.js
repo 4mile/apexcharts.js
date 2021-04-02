@@ -596,6 +596,10 @@ export default class ApexCharts {
     this.series.resetSeries(shouldUpdateChart, shouldResetZoom)
   }
 
+  clearLegendHovers() {
+    this.legend.legendHelpers.clearHoverStates()
+  }
+
   // Public method to add event listener on chart context
   addEventListener(name, handler) {
     this.events.addEventListener(name, handler)

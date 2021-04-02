@@ -48,6 +48,10 @@ export default class Helpers {
         display: inline-block;
         margin-top: 3px;
       }	
+      .apexcharts-legend-text.apexcharts-legend-text-hovered {
+        opacity: .6;
+        cursor: pointer;
+      }	
       .apexcharts-legend-text *, .apexcharts-legend-marker * {	
         pointer-events: none;	
       }	
@@ -79,6 +83,16 @@ export default class Helpers {
     stylesheet.appendChild(rules)
 
     return stylesheet
+  }
+
+  clearHoverStates() {
+    const w = this.w
+    const textEls = w.globals.dom.baseEl.querySelectorAll(
+      '.apexcharts-legend-text'
+    )
+    textEls.forEach((textEl) => {
+      textEl.classList.remove('apexcharts-legend-text-hovered')
+    })
   }
 
   getLegendBBox() {
