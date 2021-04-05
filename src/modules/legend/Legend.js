@@ -476,6 +476,8 @@ class Legend {
 
       if (clickAllowed && w.config.legend.onItemClick.toggleDataSeries) {
         this.legendHelpers.toggleDataSeries(seriesCnt, isHidden)
+      } else if (clickAllowed && w.config.legend.onItemClick.clickHandler) {
+        w.config.legend.onItemClick.clickHandler(seriesCnt)
       }
     }
   }
