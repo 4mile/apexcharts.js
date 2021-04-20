@@ -122,13 +122,12 @@ class Radial extends Pie {
     ret.add(elSeries)
 
     if (w.config.plotOptions.radialBar.starts.show) {
-      let targets = w.config.targets
       let elStarts = this.drawStarts({
         size,
         centerX,
         centerY,
         colorArr,
-        targets
+        series
       })
       elSeries.add(elStarts.g)
     }
@@ -218,7 +217,7 @@ class Radial extends Pie {
 
   drawStarts(opts) {
     let w = this.w
-    // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, targets
+    // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, series
 
     let graphics = new Graphics(this.ctx)
     let fill = new Fill(this.ctx)
@@ -231,8 +230,8 @@ class Radial extends Pie {
     let hollowFillID = w.config.plotOptions.radialBar.hollow.background
     let hollowSize =
       opts.size -
-      strokeWidth * opts.targets.length -
-      this.margin * opts.targets.length -
+      strokeWidth * opts.series.length -
+      this.margin * opts.series.length -
       (strokeWidth *
         parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10)) /
         100 /
@@ -262,8 +261,8 @@ class Radial extends Pie {
     }
 
     for (
-      let i = reverseLoop ? opts.targets.length - 1 : 0;
-      reverseLoop ? i >= 0 : i < opts.targets.length;
+      let i = reverseLoop ? opts.series.length - 1 : 0;
+      reverseLoop ? i >= 0 : i < opts.series.length;
       reverseLoop ? i-- : i++
     ) {
       let elRadialBarArc = graphics.group({
@@ -284,7 +283,7 @@ class Radial extends Pie {
       let pathFill = fill.fillPath({
         seriesNumber: i,
         size: opts.size,
-        value: opts.targets[i]
+        value: opts.series[i]
       })
 
       let startAngle = this.startAngle
@@ -292,15 +291,15 @@ class Radial extends Pie {
 
       // if data exceeds 100 or -100, make it 100 or -100
       let dataValue
-      if (opts.targets[i] > 100) {
+      if (opts.series[i] > 100) {
         dataValue = 1
-      } else if (opts.targets[i] < -100) {
+      } else if (opts.series[i] < -100) {
         dataValue = -1
       } else {
-        dataValue = opts.targets[i] / 100
+        dataValue = opts.series[i] / 100
       }
 
-      let rotateCounterClockwise = opts.targets[i] < 0
+      let rotateCounterClockwise = opts.series[i] < 0
 
       let endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle
 
@@ -351,7 +350,7 @@ class Radial extends Pie {
 
       Graphics.setAttrs(elPath.node, {
         'data:angle': angle,
-        'data:value': opts.targets[i]
+        'data:value': opts.series[i]
       })
 
       if (w.config.chart.dropShadow.enabled) {
@@ -373,7 +372,7 @@ class Radial extends Pie {
       if (this.initialAnim && !w.globals.resized && !w.globals.dataChanged) {
         dur = ((endAngle - startAngle) / 360) * w.config.chart.animations.speed
 
-        this.animDur = dur / (opts.targets.length * 1.2) + this.animDur
+        this.animDur = dur / (opts.series.length * 1.2) + this.animDur
         this.animBeginArr.push(this.animDur)
       }
 

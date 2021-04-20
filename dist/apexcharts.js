@@ -20948,13 +20948,12 @@
         ret.add(elSeries);
 
         if (w.config.plotOptions.radialBar.starts.show) {
-          var _targets = w.config.targets;
           var elStarts = this.drawStarts({
             size: size,
             centerX: centerX,
             centerY: centerY,
             colorArr: colorArr,
-            targets: _targets
+            series: series
           });
           elSeries.add(elStarts.g);
         }
@@ -21029,7 +21028,7 @@
     }, {
       key: "drawStarts",
       value: function drawStarts(opts) {
-        var w = this.w; // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, targets
+        var w = this.w; // size, donutSize, centerX, centerY, colorArr, lineColorArr, sectorAngleArr, series
 
         var graphics = new Graphics(this.ctx);
         var fill = new Fill(this.ctx);
@@ -21038,7 +21037,7 @@
         var strokeWidth = this.getStrokeWidth(opts);
         opts.size = opts.size - strokeWidth / 2;
         var hollowFillID = w.config.plotOptions.radialBar.hollow.background;
-        var hollowSize = opts.size - strokeWidth * opts.targets.length - this.margin * opts.targets.length - strokeWidth * parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10) / 100 / 2;
+        var hollowSize = opts.size - strokeWidth * opts.series.length - this.margin * opts.series.length - strokeWidth * parseInt(w.config.plotOptions.radialBar.track.strokeWidth, 10) / 100 / 2;
         var hollowRadius = hollowSize - w.config.plotOptions.radialBar.hollow.margin;
 
         if (w.config.plotOptions.radialBar.hollow.image !== undefined) {
@@ -21063,7 +21062,7 @@
           reverseLoop = true;
         }
 
-        for (var i = reverseLoop ? opts.targets.length - 1 : 0; reverseLoop ? i >= 0 : i < opts.targets.length; reverseLoop ? i-- : i++) {
+        for (var i = reverseLoop ? opts.series.length - 1 : 0; reverseLoop ? i >= 0 : i < opts.series.length; reverseLoop ? i-- : i++) {
           var elRadialBarArc = graphics.group({
             class: "apexcharts-start apexcharts-radial-start",
             seriesName: Utils.escapeString(w.globals.seriesNames[i] + '-start')
@@ -21078,22 +21077,22 @@
           var pathFill = fill.fillPath({
             seriesNumber: i,
             size: opts.size,
-            value: opts.targets[i]
+            value: opts.series[i]
           });
           var startAngle = this.startAngle;
           var prevStartAngle = void 0; // if data exceeds 100 or -100, make it 100 or -100
 
           var dataValue = void 0;
 
-          if (opts.targets[i] > 100) {
+          if (opts.series[i] > 100) {
             dataValue = 1;
-          } else if (opts.targets[i] < -100) {
+          } else if (opts.series[i] < -100) {
             dataValue = -1;
           } else {
-            dataValue = opts.targets[i] / 100;
+            dataValue = opts.series[i] / 100;
           }
 
-          var rotateCounterClockwise = opts.targets[i] < 0;
+          var rotateCounterClockwise = opts.series[i] < 0;
           var endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle;
           var prevEndAngle = void 0;
 
@@ -21141,7 +21140,7 @@
           });
           Graphics.setAttrs(elPath.node, {
             'data:angle': angle,
-            'data:value': opts.targets[i]
+            'data:value': opts.series[i]
           });
 
           if (w.config.chart.dropShadow.enabled) {
@@ -21160,7 +21159,7 @@
 
           if (this.initialAnim && !w.globals.resized && !w.globals.dataChanged) {
             dur = (endAngle - startAngle) / 360 * w.config.chart.animations.speed;
-            this.animDur = dur / (opts.targets.length * 1.2) + this.animDur;
+            this.animDur = dur / (opts.series.length * 1.2) + this.animDur;
             this.animBeginArr.push(this.animDur);
           }
 
