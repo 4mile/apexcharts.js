@@ -21084,10 +21084,10 @@
 
           var dataValue = void 0;
 
-          if (opts.series[i] > 100) {
-            dataValue = 1;
-          } else if (opts.series[i] < -100) {
-            dataValue = -1;
+          if (opts.series[i] > 99.4) {
+            dataValue = 0.994;
+          } else if (opts.series[i] < -99.4) {
+            dataValue = -0.994;
           } else {
             dataValue = opts.series[i] / 100;
           }
@@ -21099,10 +21099,10 @@
           if (w.globals.dataChanged) {
             var prevValue = void 0;
 
-            if (w.globals.previousPaths[i] > 100) {
-              prevValue = 1;
-            } else if (w.globals.previousPaths[i] < -100) {
-              prevValue = -1;
+            if (w.globals.previousPaths[i] > 99.4) {
+              prevValue = 0.994;
+            } else if (w.globals.previousPaths[i] < -99.4) {
+              prevValue = -0.994;
             } else {
               prevValue = w.globals.previousPaths[i] / 100;
             }
@@ -21245,10 +21245,10 @@
 
           var dataValue = void 0;
 
-          if (opts.targets[i] > 100) {
-            dataValue = 1;
-          } else if (opts.targets[i] < -100) {
-            dataValue = -1;
+          if (opts.targets[i] > 99.4) {
+            dataValue = 0.994;
+          } else if (opts.targets[i] < -99.4) {
+            dataValue = -0.994;
           } else {
             dataValue = opts.targets[i] / 100;
           }
@@ -21260,10 +21260,10 @@
           if (w.globals.dataChanged) {
             var prevValue = void 0;
 
-            if (w.globals.previousPaths[i] > 100) {
-              prevValue = 1;
-            } else if (w.globals.previousPaths[i] < -100) {
-              prevValue = -1;
+            if (w.globals.previousPaths[i] > 99.4) {
+              prevValue = 0.994;
+            } else if (w.globals.previousPaths[i] < -99.4) {
+              prevValue = -0.994;
             } else {
               prevValue = w.globals.previousPaths[i] / 100;
             }
@@ -21587,10 +21587,10 @@
 
           var dataValue = void 0;
 
-          if (opts.series[i] > 100) {
-            dataValue = 1;
-          } else if (opts.series[i] < -100) {
-            dataValue = -1;
+          if (opts.series[i] > 99.4) {
+            dataValue = 0.994;
+          } else if (opts.series[i] < -99.4) {
+            dataValue = -0.994;
           } else {
             dataValue = opts.series[i] / 100;
           }
@@ -21602,10 +21602,10 @@
           if (w.globals.dataChanged) {
             var prevValue = void 0;
 
-            if (w.globals.previousPaths[i] > 100) {
-              prevValue = 1;
-            } else if (w.globals.previousPaths[i] < -100) {
-              prevValue = -1;
+            if (w.globals.previousPaths[i] > 99.4) {
+              prevValue = 0.994;
+            } else if (w.globals.previousPaths[i] < -99.4) {
+              prevValue = -0.994;
             } else {
               prevValue = w.globals.previousPaths[i] / 100;
             }

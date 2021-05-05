@@ -291,10 +291,10 @@ class Radial extends Pie {
 
       // if data exceeds 100 or -100, make it 100 or -100
       let dataValue
-      if (opts.series[i] > 100) {
-        dataValue = 1
-      } else if (opts.series[i] < -100) {
-        dataValue = -1
+      if (opts.series[i] > 99.4) {
+        dataValue = 0.994
+      } else if (opts.series[i] < -99.4) {
+        dataValue = -0.994
       } else {
         dataValue = opts.series[i] / 100
       }
@@ -306,10 +306,10 @@ class Radial extends Pie {
       let prevEndAngle
       if (w.globals.dataChanged) {
         let prevValue
-        if (w.globals.previousPaths[i] > 100) {
-          prevValue = 1
-        } else if (w.globals.previousPaths[i] < -100) {
-          prevValue = -1
+        if (w.globals.previousPaths[i] > 99.4) {
+          prevValue = 0.994
+        } else if (w.globals.previousPaths[i] < -99.4) {
+          prevValue = -0.994
         } else {
           prevValue = w.globals.previousPaths[i] / 100
         }
@@ -476,10 +476,10 @@ class Radial extends Pie {
 
       // if data exceeds 100 or -100, make it 100 or -100
       let dataValue
-      if (opts.targets[i] > 100) {
-        dataValue = 1
-      } else if (opts.targets[i] < -100) {
-        dataValue = -1
+      if (opts.targets[i] > 99.4) {
+        dataValue = 0.994
+      } else if (opts.targets[i] < -99.4) {
+        dataValue = -0.994
       } else {
         dataValue = opts.targets[i] / 100
       }
@@ -491,10 +491,10 @@ class Radial extends Pie {
       let prevEndAngle
       if (w.globals.dataChanged) {
         let prevValue
-        if (w.globals.previousPaths[i] > 100) {
-          prevValue = 1
-        } else if (w.globals.previousPaths[i] < -100) {
-          prevValue = -1
+        if (w.globals.previousPaths[i] > 99.4) {
+          prevValue = 0.994
+        } else if (w.globals.previousPaths[i] < -99.4) {
+          prevValue = -0.994
         } else {
           prevValue = w.globals.previousPaths[i] / 100
         }
@@ -895,25 +895,24 @@ class Radial extends Pie {
 
       // if data exceeds 100 or -100, make it 100 or -100
       let dataValue
-      if (opts.series[i] > 100) {
-        dataValue = 1
-      } else if (opts.series[i] < -100) {
-        dataValue = -1
+      if (opts.series[i] > 99.4) {
+        dataValue = 0.994
+      } else if (opts.series[i] < -99.4) {
+        dataValue = -0.994
       } else {
         dataValue = opts.series[i] / 100
       }
 
       let rotateCounterClockwise = opts.series[i] < 0
-
       let endAngle = Math.round(this.totalAngle * dataValue) + this.startAngle
 
       let prevEndAngle
       if (w.globals.dataChanged) {
         let prevValue
-        if (w.globals.previousPaths[i] > 100) {
-          prevValue = 1
-        } else if (w.globals.previousPaths[i] < -100) {
-          prevValue = -1
+        if (w.globals.previousPaths[i] > 99.4) {
+          prevValue = 0.994
+        } else if (w.globals.previousPaths[i] < -99.4) {
+          prevValue = -0.994
         } else {
           prevValue = w.globals.previousPaths[i] / 100
         }
